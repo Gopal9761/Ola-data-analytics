@@ -2,7 +2,7 @@
 
 An end-to-end data analytics project on 40,539 ride bookings. It covers data cleaning in Python, 10 business questions in SQL, and an interactive 5-view dashboard.
 
-**Live dashboard:** `https://<your-github-username>.github.io/ola-ride-analytics/dashboard/` (see "Publish the dashboard" below)
+  **Live dashboard:** https://gopal9761.github.io/Ola-data-analytics/dashboard/ (see "Publish the dashboard" below)
 
 ## Business questions
 How many rides are completed, where is revenue coming from, why do rides get cancelled, and how do customers and drivers rate each other?
@@ -36,7 +36,7 @@ Python (pandas), SQL (MySQL syntax, tested in SQLite), HTML/JavaScript with Char
 
 ## Project structure
 ```
-ola-ride-analytics/
+Ola-data-analytics/
 ├── data/ola_bookings_clean.csv    cleaned dataset (40,539 rows)
 ├── scripts/clean.py               cleaning steps
 ├── scripts/run_sql.py             runs the SQL answers and prints results

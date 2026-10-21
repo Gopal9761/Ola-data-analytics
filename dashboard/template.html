@@ -1,0 +1,283 @@
+<title>Bengaluru Ride Analytics</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: dark left rail with five view tabs (mirrors the Power BI slide template), light canvas with KPI strip and chart cards on the right. */
+:root{
+  --bg:#f1f2f1; --card:#ffffff; --ink:#1d2320; --muted:#5d6762; --grid:#e3e6e3; --line:#d5dad6;
+  --rail:#262826; --rail-ink:#b9bfba; --accent:#8fd14f; --accent-ink:#1b2a10;
+  --c1:#3a8a2b; --c2:#8a96a0; --good:#3a8a2b; --warn:#c98a1d; --bad:#c9432f; --slate:#7a8794;
+  --font:'Poppins',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#161816; --card:#1f221f; --ink:#e9ede9; --muted:#a2aba5; --grid:#2c312d; --line:#383e39;
+  --rail:#101110; --c1:#79c653; --c2:#7d8a94; --good:#79c653; --warn:#e0a63a; --bad:#e0624d; --slate:#8d99a4; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#161816; --card:#1f221f; --ink:#e9ede9; --muted:#a2aba5; --grid:#2c312d; --line:#383e39;
+  --rail:#101110; --c1:#79c653; --c2:#7d8a94; --good:#79c653; --warn:#e0a63a; --bad:#e0624d; --slate:#8d99a4; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);margin:0;font-size:14px}
+.app{display:grid;grid-template-columns:208px minmax(0,1fr);min-height:100vh}
+.rail{background:var(--rail);padding:20px 0;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;align-self:start}
+.brand{padding:0 20px 20px;color:#fff}
+.brand b{display:block;font-size:17px;font-weight:600;line-height:1.25}
+.brand span{font-size:11px;color:var(--rail-ink);letter-spacing:.04em}
+.tab{all:unset;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 20px;color:var(--rail-ink);font-size:14px;border-left:4px solid transparent}
+.tab svg{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.tab:hover{color:#fff}
+.tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.tab[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);font-weight:500;border-left-color:#fff}
+main{padding:24px max(16px,env(safe-area-inset-right,0px)) 40px 24px;min-width:0}
+header.top{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:flex-end;margin-bottom:20px}
+h1{font-size:22px;font-weight:600;margin:0}
+.sub{color:var(--muted);font-size:12px;margin-top:2px}
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.filters label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+select,input[type=date]{font:inherit;font-size:13px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:6px;padding:7px 9px;min-height:36px}
+button.reset{font:inherit;font-size:13px;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:6px;padding:7px 12px;min-height:36px;cursor:pointer}
+select:focus-visible,input:focus-visible,button.reset:focus-visible{outline:2px solid var(--c1);outline-offset:1px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--card);border-radius:8px;padding:14px 16px;border:1px solid var(--line)}
+.kpi .l{font-size:11px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
+.kpi .v{font-family:var(--mono);font-size:24px;font-weight:500;margin-top:4px;font-variant-numeric:tabular-nums}
+.kpi .n{font-size:11px;color:var(--muted);margin-top:2px}
+.insight{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;line-height:1.5}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;min-width:0}
+.card.wide{grid-column:1/-1}
+.card h2{font-size:14px;font-weight:600;margin:0}
+.card p.d{font-size:12px;color:var(--muted);margin:2px 0 12px;line-height:1.4}
+.ch{position:relative;height:280px}
+.ch.tall{height:320px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--grid);font-variant-numeric:tabular-nums}
+th:first-child,td:first-child{text-align:left}
+th{font-size:11px;color:var(--muted);font-weight:500;letter-spacing:.04em;text-transform:uppercase}
+.scroll{overflow-x:auto}
+.lead{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.lead li{display:grid;grid-template-columns:24px 110px 1fr auto;gap:10px;align-items:center;font-size:13px}
+.lead .rk{font-family:var(--mono);color:var(--muted)}
+.lead .id{font-family:var(--mono);font-size:12px}
+.lead .bar{height:10px;background:var(--grid);border-radius:0 4px 4px 0;overflow:hidden}
+.lead .bar i{display:block;height:100%;background:var(--c1);border-radius:0 4px 4px 0}
+.lead .amt{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.hint{font-size:11px;color:var(--muted);margin-top:8px}
+svg text{font-family:var(--font)}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr}
+  .rail{position:static;height:auto;flex-direction:row;overflow-x:auto;padding:0;gap:0}
+  .brand{display:none}
+  .tab{padding:14px 16px;border-left:0;border-bottom:4px solid transparent;white-space:nowrap;flex:none}
+  .tab[aria-selected="true"]{border-bottom-color:#fff}
+  main{padding:16px max(16px,env(safe-area-inset-right,0px)) 32px max(16px,env(safe-area-inset-left,0px))}
+  .lead li{grid-template-columns:20px 92px 1fr auto}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="app">
+  <nav class="rail" role="tablist" aria-label="Dashboard views">
+    <div class="brand"><b>Bengaluru<br>Ride Analytics</b><span>JULY 2024</span></div>
+    <button class="tab" role="tab" data-tab="overall" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M4 4v16h16"/><circle cx="9" cy="14" r="1"/><circle cx="13" cy="10" r="1"/><circle cx="17" cy="8" r="1"/></svg>Overall</button>
+    <button class="tab" role="tab" data-tab="vehicle" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M3 15v-3l2-5h14l2 5v3"/><path d="M3 15h18v3H3z"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/></svg>Vehicle Type</button>
+    <button class="tab" role="tab" data-tab="revenue" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M7 5h10M7 9h10M7 5c5 0 5 8-1 8H7l7 6"/></svg>Revenue</button>
+    <button class="tab" role="tab" data-tab="cancel" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 8l8 8M16 8l-8 8"/></svg>Cancellation</button>
+    <button class="tab" role="tab" data-tab="ratings" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>Ratings</button>
+  </nav>
+  <main>
+    <header class="top">
+      <div><h1 id="title">Overall</h1><div class="sub" id="scope"></div></div>
+      <div class="filters">
+        <label>Vehicle<select id="fv"></select></label>
+        <label>From<input type="date" id="f1" min="2024-07-01" max="2024-07-30" value="2024-07-01"></label>
+        <label>To<input type="date" id="f2" min="2024-07-01" max="2024-07-30" value="2024-07-30"></label>
+        <button class="reset" id="rst">Reset</button>
+      </div>
+    </header>
+    <section id="view"></section>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const D = /*DATA*/null;
+const R = D.rows, N = R.d.length;
+const inr = n => '₹' + Math.round(n).toLocaleString('en-IN');
+const num = n => Math.round(n).toLocaleString('en-IN');
+const pct = (a,b) => b ? (100*a/b).toFixed(1)+'%' : '–';
+const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0;
+const SUCCESS = D.st.indexOf('Success'), CBC = D.st.indexOf('Canceled by Customer'), CBD = D.st.indexOf('Canceled by Driver'), DNF = D.st.indexOf('Driver Not Found');
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const state = {tab:(location.hash||'#overall').slice(1), veh:-1, from:0, to:D.days.length-1};
+const TITLES = {overall:'Overall',vehicle:'Vehicle Type',revenue:'Revenue',cancel:'Cancellation',ratings:'Ratings'};
+if(!TITLES[state.tab]) state.tab='overall';
+let charts = {};
+
+function rows(){ const o=[]; for(let i=0;i<N;i++){ if((state.veh<0||R.v[i]===state.veh)&&R.d[i]>=state.from&&R.d[i]<=state.to) o.push(i);} return o; }
+function group(idx,keyf,valf){ const m=new Map(); for(const i of idx){const k=keyf(i); if(k<0) continue; if(!m.has(k)) m.set(k,[]); m.get(k).push(valf(i));} return m; }
+function sum(a){let s=0;for(const x of a)s+=x;return s;}
+function quant(a,q){const s=[...a].sort((x,y)=>x-y);const p=(s.length-1)*q,lo=Math.floor(p),hi=Math.ceil(p);return s[lo]+(s[hi]-s[lo])*(p-lo);}
+function fmtDay(i){const d=new Date(D.days[i]+'T00:00:00');return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});}
+
+/* Chart.js setup that follows the page tokens */
+const valueLabels = {id:'valueLabels',afterDatasetsDraw(ch,_a,o){ if(!o||!o.fmt) return; const c=ch.ctx; c.save(); c.fillStyle=css('--ink'); c.font='500 11px '+css('--mono'); c.textBaseline='middle';
+  ch.getDatasetMeta(0).data.forEach((el,i)=>{const v=ch.data.datasets[0].data[i]; const t=o.fmt(v); if(ch.options.indexAxis==='y'){c.textAlign='left';c.fillText(t,el.x+6,el.y);}else{c.textAlign='center';c.textBaseline='bottom';c.fillText(t,el.x,el.y-4);}}); c.restore();}};
+function setup(){ Chart.defaults.font.family=css('--font'); Chart.defaults.font.size=11; Chart.defaults.color=css('--muted'); Chart.defaults.borderColor=css('--grid'); Chart.defaults.animation=false; }
+function mk(id,cfg){ if(charts[id]) charts[id].destroy(); const el=document.getElementById(id); if(!el) return; cfg.plugins=[...(cfg.plugins||[]),valueLabels]; charts[id]=new Chart(el,cfg); }
+const noLegend={legend:{display:false}};
+function barCfg(labels,data,{horizontal=false,color,fmt=num,max,tip}={}){
+  const pad = horizontal ? {right:64} : {top:20};
+  return {type:'bar',data:{labels,datasets:[{data,backgroundColor:color||css('--c1'),borderRadius:4,borderSkipped:horizontal?'left':'bottom',maxBarThickness:36}]},
+    options:{indexAxis:horizontal?'y':'x',maintainAspectRatio:false,layout:{padding:pad},
+      plugins:{...noLegend,valueLabels:{fmt},tooltip:{callbacks:{label:c=>(tip?tip(c):fmt(c.parsed[horizontal?'x':'y']))}}},
+      scales:{x:{grid:{display:horizontal,drawTicks:false},beginAtZero:true,max:horizontal?max:undefined,border:{display:false},ticks:{callback:horizontal?undefined:function(v){return this.getLabelForValue(v)}}},
+              y:{grid:{display:!horizontal},beginAtZero:true,max:horizontal?undefined:max,border:{display:false},ticks:{display:true}}}}};
+}
+function legend(items){ return '<div class="legend">'+items.map(([c,t])=>`<span><i style="background:${c}"></i>${t}</span>`).join('')+'</div>'; }
+const kpi=(l,v,n='')=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="n">${n}</div></div>`;
+const card=(t,d,body,cls='')=>`<div class="card ${cls}"><h2>${t}</h2><p class="d">${d}</p>${body}</div>`;
+const cv=(id,tall)=>`<div class="ch ${tall?'tall':''}"><canvas id="${id}" role="img" aria-label="${id}"></canvas></div>`;
+
+const views = {
+overall(idx){
+  const succ=idx.filter(i=>R.s[i]===SUCCESS), val=sum(succ.map(i=>R.val[i]));
+  const kp=kpi('Total bookings',num(idx.length),'all statuses')+kpi('Success rate',pct(succ.length,idx.length),num(succ.length)+' completed')+kpi('Revenue',inr(val),'successful rides')+kpi('Avg booking value',inr(succ.length?val/succ.length:0),'per successful ride')+kpi('Avg ride distance',(succ.length?avg(succ.map(i=>R.km[i])):0).toFixed(1)+' km','successful rides');
+  const tot=new Array(D.days.length).fill(0), ok=new Array(D.days.length).fill(0);
+  for(const i of idx){tot[R.d[i]]++; if(R.s[i]===SUCCESS) ok[R.d[i]]++;}
+  const wk=[],we=[]; tot.forEach((t,d)=>{ if(d<state.from||d>state.to) return; const dow=new Date(D.days[d]+'T00:00:00').getDay(); (dow===0||dow===6?we:wk).push(t);});
+  const ins = we.length&&wk.length ? `Weekends average <b>${num(avg(we))}</b> bookings a day against <b>${num(avg(wk))}</b> on weekdays (${Math.abs((avg(we)/avg(wk)-1)*100).toFixed(1)}% ${avg(we)>=avg(wk)?'higher':'lower'}). Demand is steady through the week.` : 'Select a wider date range to compare weekends and weekdays.';
+  const stN=D.st.map((_,k)=>idx.filter(i=>R.s[i]===k).length);
+  const html=`<div class="kpis">${kp}</div><div class="insight">${ins}</div><div class="grid">
+   ${card('Ride volume over time','Bookings per day. Daily counts include every booking status.',cv('c_vol',1),'wide')}
+   ${card('Booking status breakdown','Share of all bookings by outcome.',`<div class="ch" style="height:240px"><canvas id="c_st" role="img" aria-label="Booking status"></canvas></div><div id="lg_st"></div>`)}
+   ${card('Status counts','Same data as the doughnut, in numbers.',`<div class="scroll"><table><tr><th>Status</th><th>Bookings</th><th>Share</th></tr>${D.st.map((s,k)=>`<tr><td>${s}</td><td>${num(stN[k])}</td><td>${pct(stN[k],idx.length)}</td></tr>`).join('')}</table></div>`)}
+  </div>`;
+  return {html,draw(){
+    const labels=D.days.map((_,i)=>fmtDay(i)).slice(state.from,state.to+1);
+    mk('c_vol',{type:'line',data:{labels,datasets:[{label:'All bookings',data:tot.slice(state.from,state.to+1),borderColor:css('--c1'),backgroundColor:css('--c1'),borderWidth:2,pointRadius:3,pointHoverRadius:6,tension:.25},{label:'Successful',data:ok.slice(state.from,state.to+1),borderColor:css('--c2'),backgroundColor:css('--c2'),borderWidth:2,pointRadius:3,pointHoverRadius:6,tension:.25,borderDash:[5,4]}]},
+      options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',align:'start',labels:{usePointStyle:true,boxWidth:8}}},scales:{y:{beginAtZero:true,border:{display:false}},x:{grid:{display:false},ticks:{maxTicksLimit:10}}}}});
+    const cols=[css('--good'),css('--warn'),css('--bad'),css('--slate')], order=[SUCCESS,CBC,CBD,DNF];
+    mk('c_st',{type:'doughnut',data:{labels:order.map(k=>D.st[k]),datasets:[{data:order.map(k=>stN[k]),backgroundColor:cols,borderColor:css('--card'),borderWidth:2}]},options:{maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${num(c.parsed)} (${pct(c.parsed,idx.length)})`}}}}});
+    document.getElementById('lg_st').innerHTML=legend(order.map((k,j)=>[cols[j],`${D.st[k]} ${pct(stN[k],idx.length)}`]));
+  }};
+},
+vehicle(idx){
+  const succ=idx.filter(i=>R.s[i]===SUCCESS);
+  const dist=D.vt.map((_,k)=>sum(succ.filter(i=>R.v[i]===k).map(i=>R.km[i])));
+  const ord=dist.map((d,k)=>[k,d]).sort((a,b)=>b[1]-a[1]);
+  const top=ord.slice(0,5).filter(x=>x[1]>0);
+  const kp=kpi('Total distance',num(sum(dist))+' km','successful rides')+kpi('Top vehicle',top.length?D.vt[top[0][0]]:'–',top.length?num(top[0][1])+' km':'')+kpi('Vehicle types',state.veh<0?D.vt.length:1,'in view');
+  const lowest=ord[ord.length-1];
+  const ins=state.veh<0?`<b>${D.vt[top[0][0]]}</b> covers the most distance (${num(top[0][1])} km). <b>${D.vt[lowest[0]]}</b> covers the least (${num(lowest[1])} km), with an average ride of ${(avg(succ.filter(i=>R.v[i]===lowest[0]).map(i=>R.km[i]))).toFixed(1)} km.`:'Clear the vehicle filter to compare vehicle types.';
+  const rowsT=D.vt.map((n,k)=>{const a=idx.filter(i=>R.v[i]===k); if(!a.length) return ''; const s=a.filter(i=>R.s[i]===SUCCESS); return `<tr><td>${n}</td><td>${num(a.length)}</td><td>${pct(s.length,a.length)}</td><td>${s.length?avg(s.map(i=>R.km[i])).toFixed(1):'–'}</td><td>${inr(sum(s.map(i=>R.val[i])))}</td></tr>`;}).join('');
+  const html=`<div class="kpis">${kp}</div><div class="insight">${ins}</div><div class="grid">
+   ${card('Top 5 vehicle types by ride distance','Total kilometres on successful rides.',cv('c_top'))}
+   ${card('Average ride distance','Kilometres per successful ride.',cv('c_avgd'))}
+   ${card('Vehicle summary','All vehicle types in the current filter.',`<div class="scroll"><table><tr><th>Vehicle</th><th>Bookings</th><th>Success</th><th>Avg km</th><th>Revenue</th></tr>${rowsT}</table></div>`,'wide')}
+  </div>`;
+  return {html,draw(){
+    mk('c_top',barCfg(top.map(x=>D.vt[x[0]]),top.map(x=>x[1]),{horizontal:true,fmt:v=>num(v)+' km'}));
+    const av=D.vt.map((_,k)=>{const a=succ.filter(i=>R.v[i]===k);return a.length?avg(a.map(i=>R.km[i])):null;});
+    const lab=D.vt.filter((_,k)=>av[k]!==null), dat=av.filter(x=>x!==null);
+    mk('c_avgd',barCfg(lab,dat,{fmt:v=>v.toFixed(1),tip:c=>c.parsed.y.toFixed(1)+' km'}));
+  }};
+},
+revenue(idx){
+  const succ=idx.filter(i=>R.s[i]===SUCCESS), tot=sum(succ.map(i=>R.val[i]));
+  const pay=D.pm.map((_,k)=>sum(succ.filter(i=>R.p[i]===k).map(i=>R.val[i])));
+  const cu=new Map(); for(const i of succ){ if(R.cu[i]<0) continue; cu.set(R.cu[i],(cu.get(R.cu[i])||0)+R.val[i]); }
+  const top5=[...cu.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const pOrd=pay.map((v,k)=>[k,v]).sort((a,b)=>b[1]-a[1]);
+  const digital=sum(pay.filter((_,k)=>D.pm[k]!=='Cash'));
+  const kp=kpi('Revenue',inr(tot),'successful rides')+kpi('Avg booking value',inr(succ.length?tot/succ.length:0),'per ride')+kpi('Digital payments',pct(digital,tot),'UPI and cards')+kpi('Highest single ride',inr(succ.length?Math.max(...succ.map(i=>R.val[i])):0));
+  const ins=tot?`<b>${D.pm[pOrd[0][0]]}</b> brings in the most revenue (${pct(pOrd[0][1],tot)}), followed by <b>${D.pm[pOrd[1][0]]}</b> (${pct(pOrd[1][1],tot)}).`:'No successful rides in this view.';
+  const mx=top5.length?top5[0][1]:1;
+  const lead=`<ol class="lead">${top5.map(([c,v],j)=>`<li><span class="rk">${j+1}</span><span class="id">${D.cust[c]}</span><span class="bar"><i style="width:${100*v/mx}%"></i></span><span class="amt">${inr(v)}</span></li>`).join('')}</ol>`;
+  const html=`<div class="kpis">${kp}</div><div class="insight">${ins}</div><div class="grid">
+   ${card('Revenue by payment method','Total booking value of successful rides.',cv('c_pay'))}
+   ${card('Top 5 customers by total booking value','Highest spenders on successful rides.',lead)}
+   ${card('Average ride distance per day','Kilometres per successful ride, by day.',cv('c_dd'))}
+   ${card('Ride distance distribution','Number of successful rides in each 5 km band.',cv('c_hist'))}
+  </div>`;
+  return {html,draw(){
+    mk('c_pay',barCfg(pOrd.map(x=>D.pm[x[0]]),pOrd.map(x=>x[1]),{fmt:v=>'₹'+(v/1e5).toFixed(1)+'L',tip:c=>inr(c.parsed.y)}));
+    const byd=group(succ,i=>R.d[i],i=>R.km[i]); const dl=[],dv=[]; for(let d=state.from;d<=state.to;d++){dl.push(fmtDay(d));dv.push(byd.has(d)?avg(byd.get(d)):null);}
+    mk('c_dd',{type:'line',data:{labels:dl,datasets:[{data:dv,borderColor:css('--c1'),backgroundColor:css('--c1'),borderWidth:2,pointRadius:3,pointHoverRadius:6,tension:.25}]},options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{...noLegend,tooltip:{callbacks:{label:c=>c.parsed.y.toFixed(1)+' km'}}},scales:{y:{beginAtZero:true,border:{display:false}},x:{grid:{display:false},ticks:{maxTicksLimit:8}}}}});
+    const bins=new Array(10).fill(0); succ.forEach(i=>{bins[Math.min(9,Math.floor((R.km[i]-1)/5))]++;});
+    mk('c_hist',barCfg(bins.map((_,b)=>`${b*5+1}-${b*5+5}`),bins,{fmt:num,tip:c=>num(c.parsed.y)+' rides'}));
+  }};
+},
+cancel(idx){
+  const n=idx.length, cc=idx.filter(i=>R.s[i]===CBC).length, dc=idx.filter(i=>R.s[i]===CBD).length, nf=idx.filter(i=>R.s[i]===DNF).length;
+  const succ=idx.filter(i=>R.s[i]===SUCCESS), inc=succ.filter(i=>R.inc[i]===1).length;
+  const cr=D.cr.map((_,k)=>idx.filter(i=>R.c[i]===k).length), dr=D.dr.map((_,k)=>idx.filter(i=>R.r[i]===k).length), ir=D.ir.map((_,k)=>idx.filter(i=>R.i[i]===k).length);
+  const so=a=>a.map((v,k)=>[k,v]).sort((x,y)=>y[1]-x[1]);
+  const kp=kpi('Cancelled by customer',pct(cc,n),num(cc)+' bookings')+kpi('Cancelled by driver',pct(dc,n),num(dc)+' bookings')+kpi('Driver not found',pct(nf,n),num(nf)+' bookings')+kpi('Incomplete rides',pct(inc,succ.length),num(inc)+' of successful rides');
+  const t1=so(cr)[0], t2=so(dr)[0];
+  const ins=cc&&dc?`Top customer reason: <b>${D.cr[t1[0]]}</b> (${pct(t1[1],cc)} of customer cancellations). Top driver reason: <b>${D.dr[t2[0]]}</b> (${pct(t2[1],dc)} of driver cancellations).`:'No cancellations in this view.';
+  const html=`<div class="kpis">${kp}</div><div class="insight">${ins}</div><div class="grid">
+   ${card('Cancellation reasons: customers','Number of rides cancelled by the customer.',cv('c_cr'))}
+   ${card('Cancellation reasons: drivers','Number of rides cancelled by the driver.',cv('c_dr'))}
+   ${card('Incomplete rides by reason','Successful bookings that did not finish the full trip.',cv('c_ir'))}
+  </div>`;
+  return {html,draw(){
+    const o1=so(cr), o2=so(dr), o3=so(ir);
+    mk('c_cr',barCfg(o1.map(x=>D.cr[x[0]]),o1.map(x=>x[1]),{horizontal:true}));
+    mk('c_dr',barCfg(o2.map(x=>D.dr[x[0]]),o2.map(x=>x[1]),{horizontal:true,color:css('--c2')}));
+    mk('c_ir',barCfg(o3.map(x=>D.ir[x[0]]),o3.map(x=>x[1]),{horizontal:true,color:css('--warn')}));
+  }};
+},
+ratings(idx){
+  const succ=idx.filter(i=>R.s[i]===SUCCESS&&R.dr[i]>=0&&R.cr[i]>=0);
+  const dAvg=avg(succ.map(i=>R.dr[i]/10)), cAvg=avg(succ.map(i=>R.cr[i]/10));
+  const xs=succ.map(i=>R.dr[i]/10), ys=succ.map(i=>R.cr[i]/10), mx=avg(xs), my=avg(ys);
+  let sxy=0,sxx=0,syy=0; for(let j=0;j<xs.length;j++){sxy+=(xs[j]-mx)*(ys[j]-my);sxx+=(xs[j]-mx)**2;syy+=(ys[j]-my)**2;}
+  const r=sxx&&syy?sxy/Math.sqrt(sxx*syy):0;
+  const kp=kpi('Avg driver rating',dAvg.toFixed(2),'out of 5')+kpi('Avg customer rating',cAvg.toFixed(2),'out of 5')+kpi('Rated rides',num(succ.length),'successful rides')+kpi('Correlation',r.toFixed(2),'driver vs customer');
+  const ins=`Both sides rate rides near <b>${((dAvg+cAvg)/2).toFixed(1)}</b> on average and the two ratings are almost unrelated (correlation ${r.toFixed(2)}). The average rating varies very little between vehicle types.`;
+  const html=`<div class="kpis">${kp}</div><div class="insight">${ins}</div><div class="grid">
+   ${card('Average customer rating by vehicle type','Rating out of 5, successful rides.',cv('c_avr'))}
+   ${card('Driver rating distribution','Box shows the middle 50% of ratings with the median line. Whiskers run from the lowest to the highest rating.',`<div id="box"></div>`)}
+   ${card('Customer vs driver rating','Each bubble is a rating pair. Bubble size is the number of rides.',cv('c_sc',1),'wide')}
+  </div>`;
+  return {html,draw(){
+    const av=D.vt.map((_,k)=>{const a=succ.filter(i=>R.v[i]===k);return a.length?avg(a.map(i=>R.cr[i]/10)):null;});
+    mk('c_avr',barCfg(D.vt.filter((_,k)=>av[k]!==null),av.filter(x=>x!==null),{fmt:v=>v.toFixed(2),max:5,tip:c=>c.parsed.y.toFixed(2)}));
+    // box plot (SVG, one linear scale 3.0 to 5.0)
+    const W=520,H=D.vt.length*38+36,L=96,Rr=16,lo=3,hi=5,X=v=>L+(v-lo)/(hi-lo)*(W-L-Rr);
+    let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Driver rating box plot by vehicle type">`;
+    for(let t=lo;t<=hi+1e-9;t+=0.5){s+=`<line x1="${X(t)}" x2="${X(t)}" y1="6" y2="${H-26}" stroke="${css('--grid')}"/><text x="${X(t)}" y="${H-8}" text-anchor="middle" font-size="11" fill="${css('--muted')}">${t.toFixed(1)}</text>`;}
+    D.vt.forEach((n,k)=>{const a=succ.filter(i=>R.v[i]===k).map(i=>R.dr[i]/10); const y=20+k*38; s+=`<text x="${L-8}" y="${y+4}" text-anchor="end" font-size="12" fill="${css('--ink')}">${n}</text>`; if(!a.length) return;
+      const mn=Math.min(...a),mxv=Math.max(...a),q1=quant(a,.25),md=quant(a,.5),q3=quant(a,.75);
+      s+=`<g tabindex="0"><title>${n}: min ${mn.toFixed(1)}, Q1 ${q1.toFixed(1)}, median ${md.toFixed(1)}, Q3 ${q3.toFixed(1)}, max ${mxv.toFixed(1)}</title><line x1="${X(mn)}" x2="${X(mxv)}" y1="${y}" y2="${y}" stroke="${css('--muted')}" stroke-width="1.5"/><line x1="${X(mn)}" x2="${X(mn)}" y1="${y-5}" y2="${y+5}" stroke="${css('--muted')}" stroke-width="1.5"/><line x1="${X(mxv)}" x2="${X(mxv)}" y1="${y-5}" y2="${y+5}" stroke="${css('--muted')}" stroke-width="1.5"/><rect x="${X(q1)}" y="${y-9}" width="${Math.max(2,X(q3)-X(q1))}" height="18" rx="3" fill="${css('--c1')}" fill-opacity=".85"/><line x1="${X(md)}" x2="${X(md)}" y1="${y-9}" y2="${y+9}" stroke="${css('--card')}" stroke-width="2.5"/></g>`;});
+    document.getElementById('box').innerHTML=s+'</svg>';
+    const cnt=new Map(); succ.forEach(i=>{const k=R.dr[i]+'_'+R.cr[i]; cnt.set(k,(cnt.get(k)||0)+1);});
+    const pts=[...cnt.entries()].map(([k,c])=>{const [x,y]=k.split('_');return {x:x/10,y:y/10,r:Math.max(2,Math.sqrt(c)*1.1),n:c};});
+    mk('c_sc',{type:'bubble',data:{datasets:[{data:pts,backgroundColor:css('--c1')+'99',borderColor:css('--c1'),borderWidth:1}]},options:{maintainAspectRatio:false,plugins:{...noLegend,tooltip:{callbacks:{label:c=>`Driver ${c.raw.x.toFixed(1)}, customer ${c.raw.y.toFixed(1)}: ${num(c.raw.n)} rides`}}},scales:{x:{min:2.8,max:5.2,title:{display:true,text:'Driver rating'},grid:{display:false}},y:{min:2.8,max:5.2,title:{display:true,text:'Customer rating'},border:{display:false}}}}});
+  }};
+}};
+
+function render(){
+  setup();
+  Object.values(charts).forEach(c=>c.destroy()); charts={};
+  const idx=rows(); const v=views[state.tab](idx);
+  document.getElementById('view').innerHTML=v.html; v.draw();
+  document.getElementById('title').textContent=TITLES[state.tab];
+  document.getElementById('scope').textContent=`${state.veh<0?'All vehicle types':D.vt[state.veh]} · ${fmtDay(state.from)} to ${fmtDay(state.to)} 2024 · ${num(idx.length)} bookings`;
+  document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.tab===state.tab));
+}
+const fv=document.getElementById('fv'); fv.innerHTML='<option value="-1">All vehicle types</option>'+D.vt.map((n,k)=>`<option value="${k}">${n}</option>`).join('');
+const dayOf=s=>Math.max(0,Math.min(D.days.length-1,D.days.indexOf(s)));
+fv.onchange=()=>{state.veh=+fv.value;render();};
+const f1=document.getElementById('f1'),f2=document.getElementById('f2');
+function dates(){ let a=dayOf(f1.value),b=dayOf(f2.value); if(a>b){[a,b]=[b,a];f1.value=D.days[a];f2.value=D.days[b];} state.from=a;state.to=b;render(); }
+f1.onchange=dates; f2.onchange=dates;
+document.getElementById('rst').onclick=()=>{fv.value=-1;f1.value=D.days[0];f2.value=D.days[D.days.length-1];state.veh=-1;state.from=0;state.to=D.days.length-1;render();};
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{state.tab=t.dataset.tab;try{history.replaceState(null,'','#'+state.tab)}catch(e){}render();});
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',render);
+new MutationObserver(render).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+render();
+</script>
